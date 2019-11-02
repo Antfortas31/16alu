@@ -1,0 +1,45 @@
+module adder (
+    input clk,  // clock
+    input rst,  // reset
+    
+    input io_dip[3][8],
+    input a[16],
+    input b[16],
+    output result[16],
+    output z,
+    output v,
+    output n
+  ) {
+
+  sig s[16];
+  sig xb[16];
+  
+  always {
+  
+    //addition/subtraction based on control code
+    if (io_dip[2][0] != 1){
+      s = a + b;
+    }
+    else {
+      s = a - b;
+    }
+    result = s;
+    
+    //z defaults to 1, unless whole of s[15:0] = 0
+    z = 1;
+    if (s == 0){
+    z = 0;
+    }
+    
+    n = s[15];
+    
+    //two separate cases for addition (b is normal) and subtraction (b has to xb)
+    if (io_dip[2][0] != 1){
+      v = ( (a[15] & b[15] & ~s[15])|(~a[15] & ~b[15] & s[15]));
+    }
+    else{
+      xb = ~b + 1;
+      v = ( (a[15] & xb[15] & ~s[15])|(~a[15] & ~xb[15] & s[15]));
+    }
+  }
+}
