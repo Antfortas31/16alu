@@ -16,7 +16,7 @@ module mojo_top (
     output io_sel [4],      // Digit select on IO Shield
     input io_button [5],    // 5 buttons on IO Shield
     input io_dip [3][8],    // DIP switches on IO Shield
-    
+    //final outputs
     output out[16],
     output z,
     output v,
@@ -37,6 +37,9 @@ module mojo_top (
       edge_detector edge_detector3(#RISE(1),#FALL(0));
       button_conditioner button_cond3;
       
+      //////////////////////////////////////////////////////////////
+      // put in any files here as [filename] [variable name]
+      //////////////////////////////////////////////////////////
       adder adder; 
   }
   //creat a, b, control codes
@@ -94,6 +97,9 @@ module mojo_top (
     //center button & io_dip[2] to control which part of alu
     
     //control codes for adder
+    ////////////////////////////////////////////////////////////
+    //add your control codes here
+    ////////////////////////////////////////////////////////////
     add = 0;
     sub = add + 1;
     
@@ -108,6 +114,12 @@ module mojo_top (
         n = adder.n;
         io_led[1] = adder.result[15:8];
         io_led[0] = adder.result[7:0];
+        
+     /////////////////////////////////////////////////////////////
+     //add any new modules here, use [if (edge_detector3.out == 1 & [io_dip = control code])]
+     //each module needs an output "out", "z", "v", "n"; z,v,n can just be = 0
+     //i set the io_led to light up based on the result
+     ////////////////////////////////////////////////////////////
       
     }
   }
