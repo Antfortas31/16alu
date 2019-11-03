@@ -15,12 +15,12 @@ module mojo_top (
     output io_seg [8],      // 7-segment LEDs on IO Shield
     output io_sel [4],      // Digit select on IO Shield
     input io_button [5],    // 5 buttons on IO Shield
-    input io_dip [3][8],    // DIP switches on IO Shield
-    //final outputs
-    output out[16],
-    output z,
-    output v,
-    output n
+    input io_dip [3][8]    // DIP switches on IO Shield
+    //final outputs -- re-enable once you set outputs
+    //output out[16],
+    //output z,
+    //output v,
+    //output n
     
   ) {
   
@@ -47,6 +47,10 @@ module mojo_top (
   sig b[16];
   sig add[8];
   sig sub[8];
+  sig out[16]; //disable once outputs are set
+  sig z[1];
+  sig v[1];
+  sig n [1];
   
   always {
     reset_cond.in = ~rst_n; // input raw inverted reset signal
@@ -73,10 +77,10 @@ module mojo_top (
     //default values
     a = 0;
     b = 0;
-    out = 0;
-    z = 0;
-    v = 0;
-    n = 0;
+    //out = 0; //re-enable once you set outputs
+    //z = 0;
+    //v = 0;
+    //n = 0;
     
     //left button to set a
     if (edge_detector.out == 1){
