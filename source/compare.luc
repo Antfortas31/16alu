@@ -1,0 +1,22 @@
+module compare (
+    input alufn[6], //for alufn[5:0]
+    input z[1],    // input a of 16 bits
+    input v[1],
+    input n[1],
+    output op[16] 
+  ) {
+
+  always {
+    op = 16b0;
+    case (alufn[2:1]){
+    b01:  // a == b, LSB = Z
+      op = z;
+    b10:
+      op = n ^ v; // a < b, LSB = N XOR V
+    b11:
+      op = z | (n ^ v); // a <= b, LSB = Z OR (N XOR V)
+    default:
+      op = 16b0;
+        } 
+    }
+}
