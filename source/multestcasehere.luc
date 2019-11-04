@@ -1,0 +1,191 @@
+module mojo_top (
+    input clk,              // 50MHz clock
+    input rst_n,            // reset button (active low)
+    output led [8],         // 8 user controllable LEDs
+    input cclk,             // configuration clock, AVR ready when high
+    output spi_miso,        // AVR SPI MISO
+    input spi_ss,           // AVR SPI Slave Select
+    input spi_mosi,         // AVR SPI MOSI
+    input spi_sck,          // AVR SPI Clock
+    output spi_channel [4], // AVR general purpose pins (used by default to select ADC channel)
+    input avr_tx,           // AVR TX (FPGA RX)
+    output avr_rx,          // AVR RX (FPGA TX)
+    input avr_rx_busy,      // AVR RX buffer full
+    output io_led [3][8],   // LEDs on IO Shield
+    output io_seg [8],      // 7-segment LEDs on IO Shield
+    output io_sel [4],      // Digit select on IO Shield
+    input io_button [5],    // 5 buttons on IO Shield
+    input io_dip [3][8]    // DIP switches on IO Shield
+    
+
+  ) {
+  
+  sig rst;                  // reset signal
+  
+  .clk(clk) {
+    // The reset conditioner is used to synchronize the reset signal to the FPGA
+    // clock. This ensures the entire FPGA comes out of reset at the same time.
+    reset_conditioner reset_cond;
+    
+    edge_detector edge_detector1(#RISE(1), #FALL(0));
+    button_conditioner button_cond1;
+    edge_detector edge_detector2(#RISE(1),#FALL(0));
+    button_conditioner button_cond2; 
+    edge_detector edge_detector3(#RISE(1),#FALL(0));
+    button_conditioner button_cond3;
+    edge_detector edge_detector4(#RISE(1),#FALL(0));
+    button_conditioner button_cond4;
+    
+    .rst(rst){
+      dff a[16];
+      dff b[16];
+      dff mul[16];
+      dff clock[28];
+      fsm state = {START, PP, PN, NN, ZP, ZN, ERROR, MANUAL, FINISH};
+      
+      multiply multiply;
+    }
+    
+
+  }
+ 
+
+  always {
+    reset_cond.in = ~rst_n; // input raw inverted reset signal
+    rst = reset_cond.out;   // conditioned reset
+    
+    led = 8h00;             // turn LEDs off
+    spi_miso = bz;          // not using SPI
+    spi_channel = bzzzz;    // not using flags
+    avr_rx = bz;            // not using serial port
+    
+    io_led = 3x{{8h00}};    // turn LEDs off
+    io_seg = 8hff;          // turn segments off
+    io_sel = 4hf;           // select no digits
+    
+    
+    button_cond1.in = io_button[3];
+    edge_detector1.in = button_cond1.out;
+    button_cond2.in = io_button[4];
+    edge_detector2.in = button_cond2.out;
+    button_cond3.in = io_button[2];
+    edge_detector3.in = button_cond3.out;
+    button_cond4.in = io_button[0];
+    edge_detector4.in = button_cond4.out;
+    multiply.a = 0;
+    multiply.b = 0;
+    
+    
+    case(state.q){
+      state.START:
+      multiply.a = 0;
+      multiply.b = 0;
+      io_led[2][7] = 1;
+      if (edge_detector1.out == 1){
+        io_led[2][7] = 0;
+          clock.d = 0;
+          state.d = state.PP;
+      }
+      if (edge_detector2.out == 1){
+        io_led[2][7] = 0;
+          clock.d = 0;
+          state.d = state.MANUAL;
+      }
+        
+      state.PP:
+      multiply.a = 16b0000000000000010;
+      multiply.b = 16b0000000000000100;
+      
+      if(clock.q[27:26]==0){
+        if (multiply.result == 16b0000000000001000){
+          clock.d = 0;
+          state.d = state.PN;
+        } else {
+          state.d = state.ERROR;
+        }
+      }
+        
+      state.PN:
+      multiply.a = 16b1111111111111111;
+      multiply.b = 16b0000000000000001;
+      
+      if(clock.q[27:26]==0){
+        if (multiply.result == 16b1111111111111111){
+          clock.d = 0;
+          state.d = state.NN;
+        } else {
+          state.d = state.ERROR;
+        }
+      }
+        
+      state.NN:
+      multiply.a = 16b1111111111111111;
+      multiply.b = 16b1111111111111111;
+      
+      if(clock.q[27:26]==0){
+        if (multiply.result == 16b0000000000000001){
+          clock.d = 0;
+          state.d = state.ZP;
+        } else {
+          state.d = state.ERROR;
+        }
+      }
+        
+      state.ZP:
+      multiply.a = 16b0000000000000001;
+      multiply.b = 16b0000000000000000;
+      
+      if(clock.q[27:26]==0){
+        if (multiply.result == 16b0000000000000000){
+          clock.d = 0;
+          state.d = state.ZN;
+        } else {
+          state.d = state.ERROR;
+        }
+      }
+        
+      state.ZN:
+      multiply.a = 16b1111111111111111;
+      multiply.b = 16b0000000000000000;
+      
+      if(clock.q[27:26]==0){
+        if (multiply.result == 16b0000000000000000){
+          clock.d = 0;
+          state.d = state.FINISH;
+        } else {
+          state.d = state.ERROR;
+        }
+      } 
+        
+      state.FINISH:
+      io_led[1][0] = 1;
+        
+        
+      state.ERROR:
+      io_led[0][0] = 1;
+     
+      state.MANUAL:
+       if(edge_detector1.out == 1){
+      a.d[15:8] = io_dip[1];
+      a.d[7:0] = io_dip[0];
+      }
+     if(edge_detector2.out == 1){
+      b.d[15:8] = io_dip[1];
+      b.d[7:0] = io_dip[0];  
+    }
+     if(io_dip[2][7] == 1){
+      io_led[0] = a.q[7:0];
+      io_led[1] = a.q[15:8]; 
+    }
+    if(io_dip[2][6] == 1){
+      io_led[0] = b.q[7:0];
+      io_led[1] = b.q[15:8]; 
+    }
+    if(io_dip[2][1] == 1){
+      mul.d = a.q * b.q;
+      io_led[0] = mul.q[7:0];
+      io_led[1] = mul.q[15:8]; 
+    }
+    }
+  }
+}
