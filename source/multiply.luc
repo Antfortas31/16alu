@@ -1,0 +1,13 @@
+module multiply (
+    input clk,  // clock
+    input rst,  // reset\
+    input a[16],
+    input b[16],
+    output result[16]
+  ) {
+
+  always {
+
+    result = a * b;
+  }
+}
