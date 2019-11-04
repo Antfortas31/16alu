@@ -1,0 +1,10 @@
+BC1.1
+
+///// remove this before quitting the file A is A1, B is B1, 
+
+X:=ODD(I, J, OR(AND(E, F), AND(OR(E, F), C));
+
+Y:=ODD(I, J, OR(OR (AND(E, F), AND(OR(E, F), C)), AND(OR(E, F), OR(A, B), C));
+
+Z:=AND(X,Y);
+ASSIGN Z;
