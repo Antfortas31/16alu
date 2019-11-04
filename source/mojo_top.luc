@@ -44,7 +44,7 @@ module mojo_top (
         dff statenum[8]; //count which state number for automatic testing
         dff a[16]; //internal inputs (change to external for future use)
         dff b[16];
-        fsm state = {START, INPUTA, INPUTB, MANUAL, ADD, SUB, MULPP, MULPN, MULNN, MULZP, MULZN, AND1, AND2, OR1, OR2, XOR1, XOR2, A1, A2, SHIFTLEFT, SHIFTRIGHT, SHIFTARI};
+        fsm state = {START, INPUTA, INPUTB, MANUAL, ADD, SUB, MULPP, MULPN, MULNN, MULZP, MULZN, AND1, AND2, OR1, OR2, XOR1, XOR2, A1, A2, SHIFTLEFT, SHIFTRIGHT, SHIFTARI, CMPEQ, CMPLT, CMPLE};
     }
   }
   //init alu
