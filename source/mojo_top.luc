@@ -41,10 +41,11 @@ module mojo_top (
       // put in any files here as [filename] [variable name]
       //////////////////////////////////////////////////////////
       adder adder; 
+      dff clock[28];
+      dff a[16];
+      dff b[16];
   }
-  //creat a, b, control codes
-  sig a[16];
-  sig b[16];
+  //create a, b, control codes
   sig add[8];
   sig sub[8];
   sig out[16]; //disable once outputs are set
@@ -65,6 +66,7 @@ module mojo_top (
     io_seg = 8hff;          // turn segments off
     io_sel = 4hf;           // select no digits
     
+    clock.d = clock.q + 1;
     
     //buttons
     button_cond.in = io_button[3];
@@ -75,27 +77,31 @@ module mojo_top (
     edge_detector3.in = button_cond3.out;
     
     //default values
-    a = 0;
-    b = 0;
+    //a.d = 16h00;
+    //b.d = 16h00;
     //out = 0; //re-enable once you set outputs
     //z = 0;
     //v = 0;
     //n = 0;
+    io_led[2][0] = 1;
     
     //left button to set a
     if (edge_detector.out == 1){
-      a[15:8] = io_dip[1];
-      a[7:0] = io_dip[0];
-      io_led[1] = a[15:8];
-      io_led[0] = a[7:0];
+      a.d[15:8] = io_dip[1];
+      a.d[7:0] = io_dip[0];
+      io_led[1] = a.q[15:8];
+      io_led[0] = a.q[7:0];
+      io_led[2][1] = 1;
+      if (clock.q[27] == 1){
+        clock.d = 0;}
     }
     
     //right button to set b
     if (edge_detector2.out == 1){
-      b[15:8] = io_dip[1];
-      b[7:0] = io_dip[0];
-      io_led[1] = b[15:8];
-      io_led[0] = b[7:0];
+      b.d[15:8] = io_dip[1];
+      b.d[7:0] = io_dip[0];
+      io_led[1] = b.q[15:8];
+      io_led[0] = b.q[7:0];
     }
     
     //center button & io_dip[2] to control which part of alu
@@ -104,11 +110,11 @@ module mojo_top (
     ////////////////////////////////////////////////////////////
     //add your control codes here
     ////////////////////////////////////////////////////////////
-    add = 0;
+    add = 8h00;
     sub = add + 1;
     
     //transfer a and b to modules
-    adder.a = a; adder.b = b; adder.io_dip=io_dip; adder.rst = rst;
+    adder.a = a.q; adder.b = b.q; adder.io_dip=io_dip; adder.rst = rst;
     
     //adder
     if (edge_detector3.out == 1 & (io_dip[2] == add | io_dip[2] == sub)){
