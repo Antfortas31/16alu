@@ -7,7 +7,6 @@ module compare (
   ) {
 
   always {
-    op = 16b0;
     case (alufn[2:1]){
     b01:  // a == b, LSB = Z
       op = z;

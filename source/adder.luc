@@ -14,7 +14,7 @@ module adder (
   always {
   
     //addition/subtraction based on control code
-    if(alufn[1] == 0){
+    if(alufn[1] == 1 &&alufn[0] == 0){
         s = a * b;
         
         result = s;

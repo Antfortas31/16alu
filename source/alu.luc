@@ -15,7 +15,7 @@ module alu (
   shifter myshifter;
 
   always{
-    //z,v,n are all 0 unless using adder
+    //z,v,n are all 0 unless using adder/cmp
     op = 16b0;
     z = 0;
     v = 0;
@@ -56,6 +56,9 @@ module alu (
         op = myshifter.op;
       b11:
         op = mycompare.op;
+        z = adder.z;
+        v = adder.v;
+        n = adder.n;
           
       }
   

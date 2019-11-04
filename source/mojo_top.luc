@@ -45,6 +45,7 @@ module mojo_top (
         dff a[16]; //internal inputs (change to external for future use)
         dff b[16];
         fsm state = {START, INPUTA, INPUTB, MANUAL, ADD, SUB, MULPP, MULPN, MULNN, MULZP, MULZN, AND1, AND2, OR1, OR2, XOR1, XOR2, A1, A2, SHIFTLEFT, SHIFTRIGHT, SHIFTARI, CMPEQ, CMPLT, CMPLE};
+        multi_seven_seg seg;
     }
   }
   //init alu
@@ -68,7 +69,10 @@ module mojo_top (
     io_led = 3x{{8h00}};    // turn LEDs off
     io_seg = 8hff;          // turn segments off
     io_sel = 4hf;           // select no digits
-    
+    seg.values = {"Z","Z","Z","Z"};
+    io_seg = ~seg.seg;      // connect segments to the driver
+    io_sel = ~seg.sel;      // connect digit select to the driver
+   
     //clock
     counter.d = counter.q + 1;
     
@@ -93,6 +97,7 @@ module mojo_top (
       
       //standy state
       state.START:
+      counter.d=0;
       statenum.d = 1;
       led[0] = 1;
        //left button to start inputs
@@ -110,6 +115,7 @@ module mojo_top (
       
       //input a on left button press, led will light up to show number before press
       state.INPUTA:
+      seg.values = {"S","E","T","A"};
         a.d[15:8] = io_dip[1];
         a.d[7:0] = io_dip[0];
         io_led[1][7:0] = a.q[15:8];
@@ -121,6 +127,7 @@ module mojo_top (
         
       
       state.INPUTB:
+        seg.values = {"S","E","T","B"};
         b.d[15:8] = io_dip[1];
         b.d[7:0] = io_dip[0];
         io_led[1] = b.q[15:8];
@@ -132,6 +139,7 @@ module mojo_top (
       
       //take output from alu
       state.MANUAL:
+        seg.values = {"N","U","A","L"};
         out = alu.op;
         z = alu.z;
         v = alu.v;
@@ -152,6 +160,8 @@ module mojo_top (
         
       state.ADD:
         //send specific alufn, a and b
+         seg.values = {"Z","A","D","D"};
+        counter.d = counter.q + 1;
         alu.alufn = 6b000000; 
         a.d = 16b0001110001110001;
         b.d = 16b1000111000111001;
@@ -178,12 +188,13 @@ module mojo_top (
         
         //following states follow the same format as ADD
       state.SUB:
+        seg.values = {"Z","S","U","B"};
         alu.alufn = 6b000001;
-        a.d = 16b1111111111111111;
-        b.d = 16b0000000000111111;
+        a.d = 16b1000000000000000;
+        b.d = 16b0111111111111111;
         
-        if(alu.op == 16b1111111111000000 && alu.z == 0 && alu.v == 1 && alu.n == 1){led[0] = 1;}//pass
-        else if(alu.op != 16b1111111111000000){led[7] = 1;} // fail
+        if(alu.op == 16b0000000000000001 && alu.z == 0 && alu.v == 1 && alu.n == 0){led[0] = 1;}//pass
+        else if(alu.op != 16b0000000000000001){led[7] = 1;} // fail
         
         io_led[0][7:0] = alu.op[7:0];
         io_led[1][7:0] = alu.op[15:8];        
@@ -198,6 +209,7 @@ module mojo_top (
         }
 
       state.MULPP:
+        seg.values = {"N","U","P","P"};
         alu.alufn = 6b000010;
         a.d = 16b0000000000000010;
         b.d = 16b0000000000000100;
@@ -219,6 +231,7 @@ module mojo_top (
         }
         
       state.MULPN:
+        seg.values = {"N","U","P","N"};
         alu.alufn = 6b000010;
         a.d = 16b1111111111111111;
         b.d = 16b0000000000000001;
@@ -240,6 +253,7 @@ module mojo_top (
         }
         
       state.MULNN:
+        seg.values = {"N","U","N","N"};
         alu.alufn = 6b000010;
         a.d = 16b1111111111111111;
         b.d = 16b1111111111111111;
@@ -261,6 +275,7 @@ module mojo_top (
         }
       
       state.MULZP:
+        seg.values = {"N","U","Z","P"};
         alu.alufn = 6b000010;
         a.d = 16b0000000000000001;
         b.d = 16b0000000000000000;
@@ -282,11 +297,12 @@ module mojo_top (
         }
         
       state.MULZN:
+        seg.values = {"N","U","Z","N"};
         alu.alufn = 6b000010;
         a.d = 16b1000000000110111;
         b.d = 16b0000000000000000;
         
-        if(alu.op == 16b0000000000001000){led[0] = 1;}
+        if(alu.op == 16b0000000000000000){led[0] = 1;}
         else{led[7] = 1;}
         
         io_led[0][7:0] = alu.op[7:0];
@@ -303,6 +319,7 @@ module mojo_top (
         }
         
       state.AND1:
+        seg.values = {"A","N","D",7h1};
         alu.alufn = 6b011000;
         a.d = 16b0000111111111110;
         b.d = 16b1111111111111111;
@@ -324,6 +341,7 @@ module mojo_top (
         }
       
       state.AND2:
+        seg.values = {"A","N","D",7h2};
         alu.alufn = 6b011000;
         alu.a = 16b1111111111111111;
         alu.b = 16b1111111111111111;
@@ -533,7 +551,7 @@ module mojo_top (
         
        if(counter.q[WAIT]==1){
           counter.d = 0;
-          statenum.d = 1;
+          statenum.d = statenum.q + 1;
           state.d = state.CMPEQ;
         }
         
@@ -542,83 +560,75 @@ module mojo_top (
         } 
         
      state.CMPEQ:  //comparing equal for when z = 1 
-        io_led[0][3] = 1;
         alu.alufn = 6b110011;
-        
-        if(alu.z == b1){io_led[0][1] = 1;}     //meaning a=b
-        else {io_led[0][0] = 1;}
-        
+        alu.a = 16b110;
+        alu.b = 16b110;
+
+        if(alu.z == 1b1){led[0] = 1;}     //meaning a=b
+        else {led[7] = 1;}
+                         
+        io_led[0][7:0] = alu.op[7:0];
+        io_led[1][7:0] = alu.op[15:8];
+        io_led[2] = statenum.q;
+
         if(counter.q[WAIT]==1){
         counter.d = 0;
+        statenum.d = statenum.q + 1;
         state.d = state.CMPLT;
         }
-                
-        io_led[1][7:0] = alu.op[7:0];
-        io_led[2][7:0] = alu.op[15:8];
-                
+
         if(io_button[1] == 1){
         state.d = state.MANUAL;   
         }   
         
       state.CMPLT:  //comparing LESS THAN
-        io_led[0][4] = 1;
-        alu.alufn = 6b110011;
+        alu.alufn = 6b110101;
+        a.d = 16b0000000000111111;
+        b.d = 16b0111111111111111;
+
+        if(alu.n ^ alu.v  == 1b1){led[0] = 1;}    // meaning N XOR V, i.e. A IS less than B
+        else {led[7] = 1;}
         
-        if(alu.n ^ alu.v  == b1){io_led[0][1] = 1;}    // meaning N XOR V, i.e. A IS less than B
-        else {io_led[0][0] = 1;}
+        io_led[0][7:0] = alu.op[7:0];
+        io_led[1][7:0] = alu.op[15:8];
+        io_led[2] = statenum.q;
         
         if(counter.q[WAIT]==1){
         counter.d = 0;
+        statenum.d = statenum.q + 1;
         state.d = state.CMPLE;
         }        
         
-        io_led[1][7:0] = alu.op[7:0];
-        io_led[2][7:0] = alu.op[15:8];
-                
+
         if(io_button[1] == 1){
         state.d = state.MANUAL;   
         } 
         
       state.CMPLE:  //comparing LESS THAN or EQUAL
-        io_led[0][5] = 1;
-        alu.alufn = 6b110011;
+        alu.alufn = 6b110111;
+        a.d = 16b0000111111111111;
+        b.d = 16b0011111111111111;
         
-        if(alu.z|(alu.n ^ alu.v) == b1 ){io_led[0][1] = 1;}    // meaning Z OR (N XOR V), i.e. A is less than or equal to B
-        else {io_led[0][0] = 1;} // 
+        if(alu.z|(alu.n ^ alu.v) == 1b1 ){led[0] = 1;}    // meaning Z OR (N XOR V), i.e. A is less than or equal to B
+        else {led[7] = 1;} // 
+              
+        io_led[0][7:0] = alu.op[7:0];
+        io_led[1][7:0] = alu.op[15:8];
+        io_led[2] = statenum.q;
         
         if(counter.q[WAIT]==1){
         counter.d = 0;
-        state.d = state.AND1;
+        statenum.d = 1;
+        state.d = state.ADD;
         }
-        
-        io_led[1][7:0] = alu.op[7:0];
-        io_led[2][7:0] = alu.op[15:8];
+
                 
         if(io_button[1] == 1){
         state.d = state.MANUAL;   
         }     
-  
-  
-  
-  
-  
-        
-    //center button & io_dip[2] to control which part of alu
-    
-    
 
-    
-    //adder
-    //if (edge_detector3.out == 1 & (io_dip[2] == add | io_dip[2] == sub)){
-        //out = adder.result;
-        
-     /////////////////////////////////////////////////////////////
-     //add any new modules here, use [if (edge_detector3.out == 1 & [io_dip = control code])]
-     //each module needs an output "out", "z", "v", "n"; z,v,n can just be = 0
-     //i set the io_led to light up based on the result
-     ////////////////////////////////////////////////////////////
-      
     }
+   
   }
     
 }
