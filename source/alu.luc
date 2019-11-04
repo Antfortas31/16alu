@@ -9,7 +9,7 @@ module alu (
   ) {
   
   // get your modules
-  //cmp mycmp;
+  compare mycompare;
   adder adder;
   boole mybool;
   shifter myshifter;
@@ -35,6 +35,12 @@ module alu (
     myshifter.a = a;
     myshifter.b = b;
     
+    // giving compare their inputs
+    mycompare.alufn = alufn;
+    mycompare.z = adder.z;
+    mycompare.v = adder.v;
+    mycompare.n = adder.n;
+   
     //choose results based on alufn[5:4]
     case(alufn[5:4]){
       b00:
@@ -46,6 +52,9 @@ module alu (
         op = mybool.op;
       b10:
         op = myshifter.op;
+      b11:
+        op = mycompare.op;
+          
       }
   
   }
