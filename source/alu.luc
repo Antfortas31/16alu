@@ -1,0 +1,52 @@
+module alu (
+    input alufn[6],
+    input a[16],
+    input b[16],
+    output op[16],
+    output z[1],
+    output v[1],
+    output n[1]
+  ) {
+  
+  // get your modules
+  //cmp mycmp;
+  adder adder;
+  boole mybool;
+  shifter myshifter;
+
+  always{
+    //z,v,n are all 0 unless using adder
+    op = 16b0;
+    z = 0;
+    v = 0;
+    n = 0;
+    
+    //transfer a and b to modules (add your modules here)
+    //adder inputs
+    adder.a = a; adder.b = b; adder.alufn=alufn;
+    
+    // giving bool the inputs
+    mybool.alufn = alufn;
+    mybool.a =a;
+    mybool.b = b;
+    
+    // giving shifter their inputs
+    myshifter.alufn = alufn;
+    myshifter.a = a;
+    myshifter.b = b;
+    
+    //choose results based on alufn[5:4]
+    case(alufn[5:4]){
+      b00:
+        op = adder.result;
+        z = adder.z;
+        v = adder.v;
+        n = adder.n;
+      b01:
+        op = mybool.op;
+      b10:
+        op = myshifter.op;
+      }
+  
+  }
+}

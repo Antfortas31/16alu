@@ -1,0 +1,20 @@
+module shifter (
+    input alufn[6], //for alufn[5:0]
+    input a[16],    // input a of 16 bits
+    input b[16],
+    output op[16] 
+  ) {
+
+  always {
+  op = 16b0;
+    case(alufn[1:0]){
+      b00:
+        op = a << b[3:0]; //left
+        // need 4 shifters shift by 1, 2, 4, 8
+      b01:
+        op = a >> b[3:0]; //right
+      b11:
+        op = $signed(a)>>>b[3:0]; //signed right
+    }  
+  }
+}

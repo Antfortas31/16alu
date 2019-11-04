@@ -16,7 +16,10 @@ module mojo_top (
     output io_sel [4],      // Digit select on IO Shield
     input io_button [5],    // 5 buttons on IO Shield
     input io_dip [3][8]    // DIP switches on IO Shield
-    //final outputs -- re-enable once you set outputs
+    //final input/outputs -- not currently used, will be used in future
+    //in order to take external a/b from wires and output to external output
+    //input a[16]
+    //input b[16]
     //output out[16],
     //output z,
     //output v,
@@ -36,22 +39,22 @@ module mojo_top (
       button_conditioner button_cond2; 
       edge_detector edge_detector3(#RISE(1),#FALL(0));
       button_conditioner button_cond3;
-      
-      //////////////////////////////////////////////////////////////
-      // put in any files here as [filename] [variable name]
-      //////////////////////////////////////////////////////////
-      adder adder; 
-      dff clock[28];
-      dff a[16];
-      dff b[16];
+      .rst(rst){
+        dff counter[28]; //clock
+        dff statenum[8]; //count which state number for automatic testing
+        dff a[16]; //internal inputs (change to external for future use)
+        dff b[16];
+        fsm state = {START, INPUTA, INPUTB, MANUAL, ADD, SUB, AND1, AND2, OR1, OR2, XOR1, XOR2, A1, A2, SHIFTLEFT, SHIFTRIGHT, SHIFTARI};
+    }
   }
-  //create a, b, control codes
-  sig add[8];
-  sig sub[8];
-  sig out[16]; //disable once outputs are set
+  //init alu
+  alu alu;
+
+  sig out[16]; //internal outputs (change to external for future use)
   sig z[1];
   sig v[1];
-  sig n [1];
+  sig n[1];
+  const WAIT = 27;
   
   always {
     reset_cond.in = ~rst_n; // input raw inverted reset signal
@@ -66,9 +69,11 @@ module mojo_top (
     io_seg = 8hff;          // turn segments off
     io_sel = 4hf;           // select no digits
     
-    clock.d = clock.q + 1;
+    //clock
+    counter.d = counter.q + 1;
     
-    //buttons
+    
+    //de-bouncing buttons
     button_cond.in = io_button[3];
     edge_detector.in = button_cond.out;
     button_cond2.in = io_button[4];
@@ -76,54 +81,368 @@ module mojo_top (
     button_cond3.in = io_button[1];
     edge_detector3.in = button_cond3.out;
     
-    //default values
-    //a.d = 16h00;
-    //b.d = 16h00;
-    //out = 0; //re-enable once you set outputs
-    //z = 0;
-    //v = 0;
-    //n = 0;
-    io_led[2][0] = 1;
+    //pass variables to alu
+    alu.a = a.q; alu.b = b.q; alu.alufn = io_dip[2][5:0];
     
-    //left button to set a
-    if (edge_detector.out == 1){
-      a.d[15:8] = io_dip[1];
-      a.d[7:0] = io_dip[0];
-      io_led[1] = a.q[15:8];
-      io_led[0] = a.q[7:0];
-      io_led[2][1] = 1;
-      if (clock.q[27] == 1){
-        clock.d = 0;}
+    //states
+    case (state.q){
+      default:
+        a.d = 0;
+        b.d = 0;
+        statenum.d = 0;
+      
+      //standy state
+      state.START:
+      statenum.d = 1;
+      led[0] = 1;
+       //left button to start inputs
+       if (edge_detector.out == 1){
+        state.d = state.INPUTA;
+        }
+       //right button to do alu
+       if (edge_detector2.out == 1){
+        state.d = state.MANUAL;
+        }
+       //center button to cycle through test cases (below)
+       if (edge_detector3.out == 1){
+        state.d = state.ADD;
+        } 
+      
+      //input a on left button press, led will light up to show number before press
+      state.INPUTA:
+        a.d[15:8] = io_dip[1];
+        a.d[7:0] = io_dip[0];
+        io_led[1][7:0] = a.q[15:8];
+        io_led[0][7:0] = a.q[7:0];
+        led[1] = 1;
+        if (edge_detector.out == 1){
+        state.d = state.INPUTB;
+        }
+        
+      
+      state.INPUTB:
+        b.d[15:8] = io_dip[1];
+        b.d[7:0] = io_dip[0];
+        io_led[1] = b.q[15:8];
+        io_led[0] = b.q[7:0];
+        led[2] = 1;
+        if (edge_detector.out == 1){
+        state.d = state.START;
+        }
+      
+      //take output from alu
+      state.MANUAL:
+        out = alu.op;
+        z = alu.z;
+        v = alu.v;
+        n = alu.n;
+        io_led[1] = out[15:8];
+        io_led[0] = out[7:0];
+        led[3] = 1;
+        io_led[2][0] = n;
+        io_led[2][1] = v;
+        io_led[2][2] = z;
+        if (edge_detector2.out == 1){
+          state.d = state.START;
+        }
+        
+        ////////////////////////////////////////////////////////////////////////////////////
+        // add your test cases below (follow the examples) (follow the order in sw lab 3) //
+        ///////////////////////////////////////////////////////////////////////////////////
+        
+        state.ADD:
+        //send specific alufn, a and b
+        alu.alufn = 6b000000; 
+        a.d = 16b0001110001110001;
+        b.d = 16b1000111000111001;
+        
+        //check for expected answer
+        if(alu.op == 16b1010101010101010 && alu.z == 0 && alu.v == 0 && alu.n == 1){led[0] = 1;}//pass
+        else if(alu.op != 16b1010101010101010){led[7] = 1;} // fail
+        
+        //io_led[1:0] shows output, io_led[2] shows current state number in binary
+        io_led[0][7:0] = alu.op[7:0];
+        io_led[1][7:0] = alu.op[15:8];        
+        io_led[2][7:0] = statenum.q;
+        
+        //proceed to next state after a delay
+        if(counter.q[WAIT]==1){
+          counter.d = 0;
+          statenum.d = statenum.q + 1;      
+          state.d = state.SUB;
+        }
+        //exit to standby state
+        if(edge_detector3.out == 1){
+          state.d = state.START;  
+        }
+        
+        //following states follow the same format as ADD
+        state.SUB:
+        alu.alufn = 6b000001;
+        a.d = 16b1111111111111111;
+        b.d = 16b0000000000111111;
+        
+        if(alu.op == 16b1111111111000000 && alu.z == 0 && alu.v == 1 && alu.n == 1){led[0] = 1;}//pass
+        else if(alu.op != 16b1111111111000000){led[7] = 1;} // fail
+        
+        io_led[0][7:0] = alu.op[7:0];
+        io_led[1][7:0] = alu.op[15:8];        
+        io_led[2][7:0] = statenum.q;
+        if(counter.q[WAIT]==1){
+          counter.d = 0;
+          statenum.d = statenum.q + 1;      
+          state.d = state.SUB;
+        }
+        if(edge_detector3.out == 1){
+          state.d = state.START;  
+        }
+        
+        state.AND1:
+        alu.alufn = 6b011000;
+        a.d = 16b0000111111111110;
+        b.d = 16b1111111111111111;
+        
+        if(alu.op == 16b0000111111111110){led[0] = 1;}//pass
+        else if(alu.op != 16b0000111111111110){led[7] = 1;} // fail
+        
+        io_led[0][7:0] = alu.op[7:0];
+        io_led[1][7:0] = alu.op[15:8];        
+        io_led[2][7:0] = statenum.q;
+        if(counter.q[WAIT]==1){
+          counter.d = 0;
+          statenum.d = statenum.q + 1;      
+          state.d = state.AND2;
+        }
+
+        if(edge_detector3.out == 1){
+          state.d = state.START;  
+        }
+      
+      state.AND2:
+        alu.alufn = 6b011000;
+        alu.a = 16b1111111111111111;
+        alu.b = 16b1111111111111111;
+        
+        if(alu.op == 16b1111111111111111){led[0] = 1;}//pass
+        else if(alu.op != 16b1111111111111111){led[7] = 1;}
+        
+        io_led[0][7:0] = alu.op[7:0];
+        io_led[1][7:0] = alu.op[15:8];
+          
+        io_led[2] = statenum.q;
+       if(counter.q[WAIT]==1){
+          counter.d = 0;
+          statenum.d = statenum.q + 1;  
+          state.d = state.OR1;
+        }
+        
+        if(edge_detector3.out == 1){
+          state.d = state.START;  
+        }
+      
+      state.OR1:
+        alu.alufn = 6b011110;
+        alu.a = 16b111111;
+        alu.b = 16b000;
+        
+        if(alu.op == 16b111111){led[0] = 1;}
+        else if(alu.op != 16b111111){led[7] = 1;}
+        
+        io_led[0][7:0] = alu.op[7:0];
+        io_led[1][7:0] = alu.op[15:8];               
+        io_led[2] = statenum.q;
+        if(counter.q[WAIT]==1){
+          counter.d = 0;
+          statenum.d = statenum.q + 1;  
+          state.d = state.OR2;
+        }
+        
+        if(edge_detector3.out == 1){
+          state.d = state.START;  
+        }
+      
+      state.OR2:
+        alu.alufn = 6b011110;
+        alu.a = 16b1010101010101010;
+        alu.b = 16b0101010101010101;
+        
+        if(alu.op == 16b1111111111111111){led[0] = 1;}
+        else if(alu.op != 16b1111111111111111){led[7] = 1;}
+        
+        io_led[0][7:0] = alu.op[7:0];
+        io_led[1][7:0] = alu.op[15:8];            
+        io_led[2] = statenum.q;
+        if(counter.q[WAIT]==1){
+          counter.d = 0;
+          statenum.d = statenum.q + 1;  
+          state.d = state.XOR1;
+        }
+        
+        if(edge_detector3.out == 1){
+          state.d = state.START;  
+        }
+      
+      
+      state.XOR1:
+        alu.alufn = 6b010110;
+        alu.a = 16b1111111111111111;
+        alu.b = 16b000;
+        
+        if(alu.op == 16b1111111111111111){led[0] = 1;}
+        else if(alu.op != 16b1111111111111111){led[7] = 1;}
+        
+        io_led[0][7:0] = alu.op[7:0];
+        io_led[1][7:0] = alu.op[15:8];              
+        io_led[2] = statenum.q;
+        if(counter.q[WAIT]==1){
+          counter.d = 0;
+          statenum.d = statenum.q + 1;  
+          state.d = state.XOR2;
+        }
+        
+        if(edge_detector3.out == 1){
+          state.d = state.START;  
+        }
+      
+      
+      state.XOR2:
+        alu.alufn = 6b010110;
+        alu.a = 16b1111000011110000;
+        alu.b = 16b0000111100000000;
+        
+        if(alu.op == 16b1111111111110000){led[0] = 1;}
+        else if(alu.op != 16b1111111111110000){led[7] = 1;}
+        
+        io_led[0][7:0] = alu.op[7:0];
+        io_led[1][7:0] = alu.op[15:8];              
+        io_led[2] = statenum.q;
+       if(counter.q[WAIT]==1){
+          counter.d = 0;
+          statenum.d = statenum.q + 1;  
+          state.d = state.A1;
+        }
+        
+        if(edge_detector3.out == 1){
+          state.d = state.START;  
+        }
+      
+      state.A1:
+        alu.alufn = 6b011010;
+        alu.a = 16b1010101010101010;
+        alu.b = 16b01100;
+        
+        if(alu.op == 16b1010101010101010){led[0] = 1;}
+        else if(alu.op != 16b1010101010101010){led[7] = 1;}
+        
+        io_led[0][7:0] = alu.op[7:0];
+        io_led[1][7:0] = alu.op[15:8];               
+        io_led[2] = statenum.q;
+          
+       if(counter.q[WAIT]==1){
+          counter.d = 0;
+          statenum.d = statenum.q + 1;  
+          state.d = state.A2;
+        }
+        
+        if(edge_detector3.out == 1){
+          state.d = state.START;  
+        }
+        
+      state.A2:
+        alu.alufn = 6b011010;
+        alu.a = 16b1100110011001100;
+        alu.b = 16b01100;
+        
+        if(alu.op == 16b1100110011001100){led[0] = 1;}
+        else if(alu.op != 16b1100110011001100){led[7] = 1;}
+        
+        io_led[0][7:0] = alu.op[7:0];
+        io_led[1][7:0] = alu.op[15:8];              
+        io_led[2] = statenum.q;
+        
+       if(counter.q[WAIT]==1){
+          counter.d = 0;
+          statenum.d = statenum.q + 1;  
+          state.d = state.SHIFTLEFT;
+        }
+        
+        if(edge_detector3.out == 1){
+          state.d = state.START;  
+        }
+          
+      state.SHIFTLEFT: // shift left by 3
+        alu.alufn = 6b100000;
+        alu.a = 16b1100110011001100;
+        alu.b = 16b11;
+        
+        if(alu.op == 16b0110011001100000){led[0] = 1;}
+        else if(alu.op != 16b0110011001100000){led[7] = 1;}
+        
+        io_led[0][7:0] = alu.op[7:0];
+        io_led[1][7:0] = alu.op[15:8];             
+        io_led[2] = statenum.q;
+        
+       if(counter.q[WAIT]==1){
+          counter.d = 0;
+          statenum.d = statenum.q + 1;  
+          state.d = state.SHIFTRIGHT;
+        }
+        
+        if(edge_detector3.out == 1){
+          state.d = state.START;   
     }
-    
-    //right button to set b
-    if (edge_detector2.out == 1){
-      b.d[15:8] = io_dip[1];
-      b.d[7:0] = io_dip[0];
-      io_led[1] = b.q[15:8];
-      io_led[0] = b.q[7:0];
-    }
-    
+        
+     state.SHIFTRIGHT: // shift right by 5
+        alu.alufn = 6b100001;
+        alu.a = 16b1111111111111111;
+        alu.b = 16b0101;
+        
+        if(alu.op == 16b11111111111){led[0] = 1;}
+        else if(alu.op != 16b11111111111){led[7] = 1;}
+        
+        io_led[0][7:0] = alu.op[7:0];
+        io_led[1][7:0] = alu.op[15:8];              
+        io_led[2] = statenum.q;
+        
+       if(counter.q[WAIT]==1){
+          counter.d = 0;
+          statenum.d = statenum.q + 1;  
+          state.d = state.SHIFTARI;
+        }
+        
+        if(edge_detector3.out == 1){
+          state.d = state.START;     
+  }
+     state.SHIFTARI: // shift ari right by 6
+        alu.alufn = 6b100011;
+        alu.a = 16b1000110000000001;
+        alu.b = 16b110;
+        
+        if(alu.op == 16b1111111000110000){led[0] = 1;}
+        else if(alu.op != 16b1111111000110000){led[7] = 1;}
+        
+        io_led[0][7:0] = alu.op[7:0];
+        io_led[1][7:0] = alu.op[15:8];           
+        io_led[2] = statenum.q;
+        
+       if(counter.q[WAIT]==1){
+          counter.d = 0;
+          statenum.d = 1;
+          state.d = state.AND1;
+        }
+        
+        if(edge_detector3.out == 1){
+          state.d = state.START;   
+  }   
+        
     //center button & io_dip[2] to control which part of alu
     
-    //control codes for adder
-    ////////////////////////////////////////////////////////////
-    //add your control codes here
-    ////////////////////////////////////////////////////////////
-    add = 8h00;
-    sub = add + 1;
     
-    //transfer a and b to modules
-    adder.a = a.q; adder.b = b.q; adder.io_dip=io_dip; adder.rst = rst;
+
     
     //adder
-    if (edge_detector3.out == 1 & (io_dip[2] == add | io_dip[2] == sub)){
-        out = adder.result;
-        z = adder.z;
-        v = adder.v;
-        n = adder.n;
-        io_led[1] = adder.result[15:8];
-        io_led[0] = adder.result[7:0];
+    //if (edge_detector3.out == 1 & (io_dip[2] == add | io_dip[2] == sub)){
+        //out = adder.result;
         
      /////////////////////////////////////////////////////////////
      //add any new modules here, use [if (edge_detector3.out == 1 & [io_dip = control code])]

@@ -1,0 +1,21 @@
+module boole (
+    input alufn[6], //for alufn[5:0]
+    input a[16],    // input a of 16 bits
+    input b[16],
+    output op[16] 
+  ) {
+
+  always {
+  op = 16b0;
+    case(alufn){
+      // and
+      6b011000: op = a&b;
+      // or
+      6b011110: op = a|b;
+      // xor
+      6b010110: op = a^b;
+      // "A"
+      6b011010: op = a;  
+    }  
+  }
+}
