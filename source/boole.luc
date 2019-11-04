@@ -15,7 +15,15 @@ module boole (
       // xor
       6b010110: op = a^b;
       // "A"
-      6b011010: op = a;  
+      6b011010: op = a;
+      // nand
+      6b011001: op = ~(a&b);
+      // nor 
+      6b011111: op =  ~ (a|b);
+      // NXOR
+      6b010111: op = ~(a^ b); 
+      // inverse"A"
+      6b011011: op =  ~a;
     }  
   }
 }
