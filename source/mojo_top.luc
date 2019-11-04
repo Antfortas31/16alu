@@ -263,7 +263,7 @@ module mojo_top (
       state.MULZP:
         alu.alufn = 6b000010;
         a.d = 16b0000000000000001;
-        b.d = 16b0000000000000900;
+        b.d = 16b0000000000000000;
         
         if(alu.op == 16b0000000000000000){led[0] = 1;}
         else{led[7] = 1;}
