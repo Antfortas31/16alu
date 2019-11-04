@@ -14,29 +14,39 @@ module adder (
   always {
   
     //addition/subtraction based on control code
-    if (alufn[0] != 1){
-      s = a + b;
+    if(alufn[1] == 0){
+        s = a * b;
+        
+        result = s;
+        z = 0;
+        v = 0;
+        n = 0;
+    } else {
+        if (alufn[0] != 1){
+          s = a + b;
+        }
+        else {
+          s = a - b;
+        }
+        result = s;
+
+        //z defaults to 0, unless whole of s[15:0] = 0
+        z = 0;
+        if (s == 0){
+        z = 1;
+        }
+
+        n = s[15];
+
+        //two separate cases for addition (b is normal) and subtraction (b has to xb)
+        if (alufn[0] != 1){
+          v = ( (a[15] & b[15] & ~s[15])|(~a[15] & ~b[15] & s[15]));
+        }
+        else{
+          xb = ~b + 1;
+          v = ( (a[15] & xb[15] & ~s[15])|(~a[15] & ~xb[15] & s[15]));
     }
-    else {
-      s = a - b;
     }
-    result = s;
     
-    //z defaults to 0, unless whole of s[15:0] = 0
-    z = 0;
-    if (s == 0){
-    z = 1;
-    }
-    
-    n = s[15];
-    
-    //two separate cases for addition (b is normal) and subtraction (b has to xb)
-    if (alufn[0] != 1){
-      v = ( (a[15] & b[15] & ~s[15])|(~a[15] & ~b[15] & s[15]));
-    }
-    else{
-      xb = ~b + 1;
-      v = ( (a[15] & xb[15] & ~s[15])|(~a[15] & ~xb[15] & s[15]));
-    }
   }
 }
