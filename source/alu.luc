@@ -22,8 +22,10 @@ module alu (
     n = 0;
     
     //transfer a and b to modules (add your modules here)
-    //adder inputs
-    adder.a = a; adder.b = b; adder.alufn=alufn;
+    //adder input
+    adder.alufn=alufn;
+    adder.a = a; 
+    adder.b = b; 
     
     // giving bool the inputs
     mybool.alufn = alufn;
