@@ -44,7 +44,7 @@ module mojo_top (
         dff statenum[8]; //count which state number for automatic testing
         dff a[16]; //internal inputs (change to external for future use)
         dff b[16];
-        fsm state = {START, INPUTA, INPUTB, MANUAL, ADD, SUB, AND1, AND2, OR1, OR2, XOR1, XOR2, A1, A2, SHIFTLEFT, SHIFTRIGHT, SHIFTARI};
+        fsm state = {START, INPUTA, INPUTB, MANUAL, ADD, SUB, MULPP, MULPN, MULNN, MULZP, MULZN, AND1, AND2, OR1, OR2, XOR1, XOR2, A1, A2, SHIFTLEFT, SHIFTRIGHT, SHIFTARI};
     }
   }
   //init alu
@@ -150,7 +150,7 @@ module mojo_top (
         // add your test cases below (follow the examples) (follow the order in sw lab 3) //
         ///////////////////////////////////////////////////////////////////////////////////
         
-        state.ADD:
+      state.ADD:
         //send specific alufn, a and b
         alu.alufn = 6b000000; 
         a.d = 16b0001110001110001;
@@ -177,7 +177,7 @@ module mojo_top (
         }
         
         //following states follow the same format as ADD
-        state.SUB:
+      state.SUB:
         alu.alufn = 6b000001;
         a.d = 16b1111111111111111;
         b.d = 16b0000000000111111;
@@ -191,13 +191,118 @@ module mojo_top (
         if(counter.q[WAIT]==1){
           counter.d = 0;
           statenum.d = statenum.q + 1;      
-          state.d = state.SUB;
+          state.d = state.MULPP;
         }
         if(edge_detector3.out == 1){
           state.d = state.START;  
         }
+
+      state.MULPP:
+        alu.alufn = 6b000010;
+        a.d = 16b0000000000000010;
+        b.d = 16b0000000000000100;
         
-        state.AND1:
+        if(alu.op == 16b0000000000001000){led[0] = 1;}
+        else{led[7] = 1;}
+        
+        io_led[0][7:0] = alu.op[7:0];
+        io_led[1][7:0] = alu.op[15:8];        
+        io_led[2][7:0] = statenum.q;
+        if(counter.q[WAIT]==1){
+          counter.d = 0;
+          statenum.d = statenum.q + 1;      
+          state.d = state.MULPN;
+        }
+
+        if(edge_detector3.out == 1){
+          state.d = state.START;  
+        }
+        
+      state.MULPN:
+        alu.alufn = 6b000010;
+        a.d = 16b1111111111111111;
+        b.d = 16b0000000000000001;
+        
+        if(alu.op == 16b1111111111111111){led[0] = 1;}
+        else{led[7] = 1;}
+        
+        io_led[0][7:0] = alu.op[7:0];
+        io_led[1][7:0] = alu.op[15:8];        
+        io_led[2][7:0] = statenum.q;
+        if(counter.q[WAIT]==1){
+          counter.d = 0;
+          statenum.d = statenum.q + 1;      
+          state.d = state.MULNN;
+        }
+
+        if(edge_detector3.out == 1){
+          state.d = state.START;  
+        }
+        
+      state.MULNN:
+        alu.alufn = 6b000010;
+        a.d = 16b1111111111111111;
+        b.d = 16b1111111111111111;
+        
+        if(alu.op == 16b0000000000000001){led[0] = 1;}
+        else{led[7] = 1;}
+        
+        io_led[0][7:0] = alu.op[7:0];
+        io_led[1][7:0] = alu.op[15:8];        
+        io_led[2][7:0] = statenum.q;
+        if(counter.q[WAIT]==1){
+          counter.d = 0;
+          statenum.d = statenum.q + 1;      
+          state.d = state.MULZP;
+        }
+
+        if(edge_detector3.out == 1){
+          state.d = state.START;  
+        }
+      
+      state.MULZP:
+        alu.alufn = 6b000010;
+        a.d = 16b0000000000000001;
+        b.d = 16b0000000000000900;
+        
+        if(alu.op == 16b0000000000000000){led[0] = 1;}
+        else{led[7] = 1;}
+        
+        io_led[0][7:0] = alu.op[7:0];
+        io_led[1][7:0] = alu.op[15:8];        
+        io_led[2][7:0] = statenum.q;
+        if(counter.q[WAIT]==1){
+          counter.d = 0;
+          statenum.d = statenum.q + 1;      
+          state.d = state.MULZN;
+        }
+
+        if(edge_detector3.out == 1){
+          state.d = state.START;  
+        }
+        
+      state.MULZN:
+        alu.alufn = 6b000010;
+        a.d = 16b1000000000110111;
+        b.d = 16b0000000000000000;
+        
+        if(alu.op == 16b0000000000001000){led[0] = 1;}
+        else{led[7] = 1;}
+        
+        io_led[0][7:0] = alu.op[7:0];
+        io_led[1][7:0] = alu.op[15:8];        
+        io_led[2][7:0] = statenum.q;
+        if(counter.q[WAIT]==1){
+          counter.d = 0;
+          statenum.d = statenum.q + 1;      
+          state.d = state.AND1;
+        }
+
+        if(edge_detector3.out == 1){
+          state.d = state.START;  
+        }
+        
+      state.AND1:
         alu.alufn = 6b011000;
         a.d = 16b0000111111111110;
         b.d = 16b1111111111111111;
@@ -390,7 +495,7 @@ module mojo_top (
         
         if(edge_detector3.out == 1){
           state.d = state.START;   
-    }
+        }
         
      state.SHIFTRIGHT: // shift right by 5
         alu.alufn = 6b100001;
@@ -412,7 +517,8 @@ module mojo_top (
         
         if(edge_detector3.out == 1){
           state.d = state.START;     
-  }
+        }
+        
      state.SHIFTARI: // shift ari right by 6
         alu.alufn = 6b100011;
         alu.a = 16b1000110000000001;
@@ -433,8 +539,9 @@ module mojo_top (
         
         if(edge_detector3.out == 1){
           state.d = state.START;   
-  } 
-        state.CMPEQ:  //comparing equal for when z = 1 
+        } 
+        
+     state.CMPEQ:  //comparing equal for when z = 1 
         io_led[0][3] = 1;
         alu.alufn = 6b110011;
         
@@ -451,7 +558,7 @@ module mojo_top (
                 
         if(io_button[1] == 1){
         state.d = state.MANUAL;   
-  }   
+        }   
         
       state.CMPLT:  //comparing LESS THAN
         io_led[0][4] = 1;
@@ -470,7 +577,8 @@ module mojo_top (
                 
         if(io_button[1] == 1){
         state.d = state.MANUAL;   
-  } 
+        } 
+        
       state.CMPLE:  //comparing LESS THAN or EQUAL
         io_led[0][5] = 1;
         alu.alufn = 6b110011;
@@ -488,7 +596,7 @@ module mojo_top (
                 
         if(io_button[1] == 1){
         state.d = state.MANUAL;   
-  }     
+        }     
   
   
   
