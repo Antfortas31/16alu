@@ -1,6 +1,0 @@
-verilog work "D:/mojo/16alu/work/planAhead/16alu/16alu.srcs/sources_1/imports/verilog/pipeline_9.v"
-verilog work "D:/mojo/16alu/work/planAhead/16alu/16alu.srcs/sources_1/imports/verilog/reset_conditioner_1.v"
-verilog work "D:/mojo/16alu/work/planAhead/16alu/16alu.srcs/sources_1/imports/verilog/edge_detector_2.v"
-verilog work "D:/mojo/16alu/work/planAhead/16alu/16alu.srcs/sources_1/imports/verilog/button_conditioner_3.v"
-verilog work "D:/mojo/16alu/work/planAhead/16alu/16alu.srcs/sources_1/imports/verilog/adder_8.v"
-verilog work "D:/mojo/16alu/work/planAhead/16alu/16alu.srcs/sources_1/imports/verilog/mojo_top_0.v"
