@@ -428,12 +428,72 @@ module mojo_top (
        if(counter.q[WAIT]==1){
           counter.d = 0;
           statenum.d = 1;
-          state.d = state.AND1;
+          state.d = state.CMPEQ;
         }
         
         if(edge_detector3.out == 1){
           state.d = state.START;   
+  } 
+        state.CMPEQ:  //comparing equal for when z = 1 
+        io_led[0][3] = 1;
+        alu.alufn = 6b110011;
+        
+        if(alu.z == b1){io_led[0][1] = 1;}     //meaning a=b
+        else {io_led[0][0] = 1;}
+        
+        if(counter.q[WAIT]==1){
+        counter.d = 0;
+        state.d = state.CMPLT;
+        }
+                
+        io_led[1][7:0] = alu.op[7:0];
+        io_led[2][7:0] = alu.op[15:8];
+                
+        if(io_button[1] == 1){
+        state.d = state.MANUAL;   
   }   
+        
+      state.CMPLT:  //comparing LESS THAN
+        io_led[0][4] = 1;
+        alu.alufn = 6b110011;
+        
+        if(alu.n ^ alu.v  == b1){io_led[0][1] = 1;}    // meaning N XOR V, i.e. A IS less than B
+        else {io_led[0][0] = 1;}
+        
+        if(counter.q[WAIT]==1){
+        counter.d = 0;
+        state.d = state.CMPLE;
+        }        
+        
+        io_led[1][7:0] = alu.op[7:0];
+        io_led[2][7:0] = alu.op[15:8];
+                
+        if(io_button[1] == 1){
+        state.d = state.MANUAL;   
+  } 
+      state.CMPLE:  //comparing LESS THAN or EQUAL
+        io_led[0][5] = 1;
+        alu.alufn = 6b110011;
+        
+        if(alu.z|(alu.n ^ alu.v) == b1 ){io_led[0][1] = 1;}    // meaning Z OR (N XOR V), i.e. A is less than or equal to B
+        else {io_led[0][0] = 1;} // 
+        
+        if(counter.q[WAIT]==1){
+        counter.d = 0;
+        state.d = state.AND1;
+        }
+        
+        io_led[1][7:0] = alu.op[7:0];
+        io_led[2][7:0] = alu.op[15:8];
+                
+        if(io_button[1] == 1){
+        state.d = state.MANUAL;   
+  }     
+  
+  
+  
+  
+  
         
     //center button & io_dip[2] to control which part of alu
     
